@@ -16,3 +16,5 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/palserver:/var/lib/palserver
+      # 旧 steamcmd 目录挂进 agent 容器,便于日后从文件管理器取旧存档
+      - /home/meilinaier/palworld-server:/home/meilinaier/palworld-server

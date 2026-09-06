@@ -1,5 +1,8 @@
 # Builds the palserver agent (with the web UI bundled) into a single image.
 FROM node:22-alpine AS build
+# 局域网代理(构建期下载依赖用;运行期 node 不读这俩变量,不加在 runtime 阶段)
+ENV HTTP_PROXY=http://192.168.1.109:7890
+ENV HTTPS_PROXY=http://192.168.1.109:7890
 RUN corepack enable
 WORKDIR /app
 ENV CI=true
