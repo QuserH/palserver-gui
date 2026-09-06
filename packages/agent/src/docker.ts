@@ -196,9 +196,11 @@ export async function createContainer(
 ): Promise<string> {
   writeConfig(instanceDir, rec.settings);
 
-  const ports: Record<string, object> = { "8211/udp": {} };
+  // 遊戲實際綁定的是 -port 啟動參數(=gamePort),所以容器側必須與宿主機 1:1;
+  // 硬編 8211 會在 gamePort≠8211 時把流量導進沒人監聽的埠(連線逾時)。
+  const ports: Record<string, object> = { [`${rec.gamePort}/udp`]: {} };
   const bindings: Record<string, { HostPort: string }[]> = {
-    "8211/udp": [{ HostPort: String(rec.gamePort) }],
+    [`${rec.gamePort}/udp`]: [{ HostPort: String(rec.gamePort) }],
   };
   if (rec.queryPort) {
     ports[`${rec.queryPort}/udp`] = {};
