@@ -10,7 +10,7 @@ FROM debian:bookworm-slim
 
 RUN dpkg --add-architecture i386 && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=8 install -y --no-install-recommends \
       wget curl unzip ca-certificates gnupg xvfb cabextract tini && \
     rm -rf /var/lib/apt/lists/*
 
@@ -19,17 +19,17 @@ RUN wget -qO- https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor -o /u
     echo "deb [signed-by=/usr/share/keyrings/winehq.gpg] https://dl.winehq.org/wine-builds/debian/ bookworm main" \
       > /etc/apt/sources.list.d/winehq.list && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --install-recommends winehq-stable && \
+    DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=8 install -y --install-recommends winehq-stable && \
     rm -rf /var/lib/apt/lists/*
 
 # winetricks (upstream master — Debian package is often outdated)
-RUN curl -fsSL https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks \
+RUN curl -fsSL --retry 8 --retry-all-errors https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks \
       -o /usr/local/bin/winetricks && \
     chmod +x /usr/local/bin/winetricks
 
 # DepotDownloader (self-contained .NET single-file binary)
 ARG DEPOTDOWNLOADER_VERSION=3.4.0
-RUN curl -fsSLO "https://github.com/SteamRE/DepotDownloader/releases/download/DepotDownloader_${DEPOTDOWNLOADER_VERSION}/DepotDownloader-linux-x64.zip" && \
+RUN curl -fsSLO --retry 8 --retry-all-errors "https://github.com/SteamRE/DepotDownloader/releases/download/DepotDownloader_${DEPOTDOWNLOADER_VERSION}/DepotDownloader-linux-x64.zip" && \
     unzip DepotDownloader-linux-x64.zip -d /opt/depotdownloader && \
     chmod +x /opt/depotdownloader/DepotDownloader && \
     ln -s /opt/depotdownloader/DepotDownloader /usr/local/bin/DepotDownloader && \
