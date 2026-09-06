@@ -77,7 +77,7 @@ function containerName(rec: InstanceRecord): string {
   return `${CONTAINER_PREFIX}${slug ? `${slug}-` : ""}${rec.id}`;
 }
 
-async function findContainer(rec: InstanceRecord): Promise<Docker.Container | null> {
+export async function findContainer(rec: InstanceRecord): Promise<Docker.Container | null> {
   const list = await docker.listContainers({
     all: true,
     filters: { label: [`${INSTANCE_LABEL}=${rec.id}`] },

@@ -6,6 +6,7 @@ import type {
   RestServerInfo,
 } from "@palserver/shared";
 import type { InstanceRecord } from "./store.js";
+import { findContainer } from "./docker.js";
 
 /**
  * Thin proxy over the Palworld dedicated server's own REST API
@@ -35,6 +36,23 @@ class RestError extends Error {
 async function baseUrl(rec: InstanceRecord): Promise<string> {
   if (rec.backend === "k8s" && rec.k8sServiceName && rec.k8sNamespace) {
     return `http://${rec.k8sServiceName}.${rec.k8sNamespace}:${rec.settings.RESTAPIPort}/v1/api`;
+  }
+  if (rec.backend === "docker") {
+    // agent 容器化部署時,127.0.0.1 是 agent 自己的 loopback,不是宿主機 —— 直連
+    // 遊戲容器的 bridge IP(同一 docker daemon 的網路彼此可路由)。
+    try {
+      const c = await findContainer(rec);
+      if (c) {
+        const info = await c.inspect();
+        const nets = info.NetworkSettings?.Networks ?? {};
+        for (const name of Object.keys(nets)) {
+          const ip = (nets as Record<string, { IPAddress?: string }>)[name]?.IPAddress;
+          if (ip) return `http://${ip}:${rec.settings.RESTAPIPort}/v1/api`;
+        }
+      }
+    } catch {
+      /* 容器不存在/未運行 —— 落回 127.0.0.1,由 call() 拋出連線錯誤 */
+    }
   }
   return `http://127.0.0.1:${rec.settings.RESTAPIPort}/v1/api`;
 }
