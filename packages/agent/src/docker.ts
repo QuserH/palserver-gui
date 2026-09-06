@@ -222,6 +222,17 @@ export async function createContainer(
   // image 不存在時自動 build/pull(而非 throw 409 讓使用者手動處理)。
   await ensureImageExists(rec, image);
 
+  // 遊戲本體目錄持久化:GUI stop 會刪容器,若遊戲檔在容器 FS 內,每次 start 都要
+  // 重新下載整個服務端。掛載整個 home(uid 1000 = 容器內 palworld 用戶)後,
+  // DepotDownloader -validate 只做完整性校驗,不再重新下載。
+  const gameDir = path.join(instanceDir, "game");
+  fs.mkdirSync(gameDir, { recursive: true });
+  try {
+    fs.chownSync(gameDir, 1000, 1000);
+  } catch {
+    /* 已是正確屬主或無權限(如非 root 運行)——下載時由容器內用戶處理 */
+  }
+
   const container = await docker.createContainer({
     name: containerName(rec),
     Image: image,
@@ -231,6 +242,7 @@ export async function createContainer(
     HostConfig: {
       PortBindings: bindings,
       Binds: [
+        `${gameDir}:/home/palworld`,
         `${path.join(instanceDir, "saved")}:/data/saved`,
         `${path.join(instanceDir, "config")}:/data/config:ro`,
       ],
