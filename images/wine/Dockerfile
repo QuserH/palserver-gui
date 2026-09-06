@@ -22,10 +22,13 @@ RUN wget -qO- https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor -o /u
     DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=8 install -y --install-recommends winehq-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# winetricks (upstream master — Debian package is often outdated)
-RUN curl -fsSL --retry 8 --retry-all-errors https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks \
-      -o /usr/local/bin/winetricks && \
-    chmod +x /usr/local/bin/winetricks
+# VC++ 2022 runtime: winetricks 的 vcrun2022 命令對新版 redist 會在 syswow64 的
+# mv 步驟失敗(upstream bug),改用微軟官方永久短鏈直接靜默安裝 x86 + x64。
+# VC++ 2022 runtime: winetricks' vcrun2022 verb breaks on newer redist payloads
+# (mv into syswow64 fails); install both redists directly from the official
+# permanent aka.ms shortlinks instead.
+ARG VC_REDIST_X86_URL=https://aka.ms/vs/17/release/vc_redist.x86.exe
+ARG VC_REDIST_X64_URL=https://aka.ms/vs/17/release/vc_redist.x64.exe
 
 # DepotDownloader (self-contained .NET single-file binary)
 ARG DEPOTDOWNLOADER_VERSION=3.4.0
@@ -46,9 +49,14 @@ ENV DISPLAY=:99
 ENV WINEPREFIX=/root/.wine
 RUN Xvfb :99 -screen 0 1024x768x24 &>/tmp/xvfb.log && sleep 2 && \
     wineboot --init 2>&1 | tail -3 && \
-    winetricks -q vcrun2022 2>&1 | tail -3 && \
+    curl -fsSL --retry 8 --retry-all-errors -o /tmp/vc_redist.x86.exe "$VC_REDIST_X86_URL" && \
+    curl -fsSL --retry 8 --retry-all-errors -o /tmp/vc_redist.x64.exe "$VC_REDIST_X64_URL" && \
+    wine /tmp/vc_redist.x86.exe /quiet /norestart 2>&1 | tail -2; \
+    wine /tmp/vc_redist.x64.exe /quiet /norestart 2>&1 | tail -2; \
     wineserver --kill && \
-    rm -f /tmp/.X99-lock
+    rm -f /tmp/.X99-lock /tmp/vc_redist.x86.exe /tmp/vc_redist.x64.exe && \
+    test -f "$WINEPREFIX/drive_c/windows/system32/vcruntime140.dll" && \
+    test -f "$WINEPREFIX/drive_c/windows/syswow64/vcruntime140.dll"
 
 # Non-root user (UID 1000, same as vanilla for bind-mount compatibility).
 RUN id -u 1000 >/dev/null 2>&1 && usermod -l palworld -d /home/palworld -m "$(getent passwd 1000 | cut -d: -f1)" 2>/dev/null || \
