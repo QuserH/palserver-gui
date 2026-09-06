@@ -38,16 +38,17 @@ async function baseUrl(rec: InstanceRecord): Promise<string> {
     return `http://${rec.k8sServiceName}.${rec.k8sNamespace}:${rec.settings.RESTAPIPort}/v1/api`;
   }
   if (rec.backend === "docker") {
-    // agent 容器化部署時,127.0.0.1 是 agent 自己的 loopback,不是宿主機 —— 直連
-    // 遊戲容器的 bridge IP(同一 docker daemon 的網路彼此可路由)。
+    // agent 容器化部署時,127.0.0.1 是 agent 自己的 loopback;直連遊戲容器 IP 又會被
+    // Docker 的跨 bridge 隔離規則擋掉。走發布埠路徑:遊戲容器網路的網關(宿主機側)
+    // + 對外映射的 RESTAPIPort —— 這是 Docker 官方允許的跨容器訪問方式。
     try {
       const c = await findContainer(rec);
       if (c) {
         const info = await c.inspect();
         const nets = info.NetworkSettings?.Networks ?? {};
         for (const name of Object.keys(nets)) {
-          const ip = (nets as Record<string, { IPAddress?: string }>)[name]?.IPAddress;
-          if (ip) return `http://${ip}:${rec.settings.RESTAPIPort}/v1/api`;
+          const gw = (nets as Record<string, { Gateway?: string }>)[name]?.Gateway;
+          if (gw) return `http://${gw}:${rec.settings.RESTAPIPort}/v1/api`;
         }
       }
     } catch {
