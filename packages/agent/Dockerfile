@@ -15,6 +15,9 @@ COPY --from=build /app/packages/shared/dist packages/shared/dist
 COPY --from=build /app/packages/agent/package.json packages/agent/
 COPY --from=build /app/packages/agent/dist packages/agent/dist
 COPY --from=build /app/packages/web/dist packages/web/dist
+# 遊戲容器映像的 build context(palserver/vanilla、palserver/wine)——
+# agent 首次啟動實例時會現場 docker build,缺了會報「找不到 build context」
+COPY --from=build /app/images images
 RUN pnpm install --frozen-lockfile --prod --filter @palserver/agent --filter @palserver/shared
 EXPOSE 8250
 CMD ["node", "packages/agent/dist/index.js"]
