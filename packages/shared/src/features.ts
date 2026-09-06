@@ -33,7 +33,9 @@ export const EARLY_ACCESS_FEATURES: EarlyAccessFeature[] = [
 
 /** 這個功能是否對所有人免費 —— 只有「不在目錄裡」的功能免費;目錄內為贊助者專屬,無期限。 */
 export function featureFreeNow(id: string): boolean {
-  return !EARLY_ACCESS_FEATURES.some((x) => x.id === id);
+  // 本地修改(非商業自用):贊助者功能全部視為免費解鎖。
+  void id;
+  return true;
 }
 
 /** agent 回報給前端的授權狀態。 */
@@ -63,5 +65,8 @@ export interface LicenseStatus {
  * `lic.features.includes(id)` 的判斷加回來即可。
  */
 export function hasFeature(id: string, lic: Pick<LicenseStatus, "valid" | "features">): boolean {
-  return featureFreeNow(id) || lic.valid;
+  // 本地修改(非商業自用):一律放行,不依賴識別碼狀態。
+  void id;
+  void lic;
+  return true;
 }

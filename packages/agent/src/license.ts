@@ -170,19 +170,20 @@ export async function clearLicenseKey(): Promise<LicenseStatus> {
 
 /** 給前端看的完整授權狀態(含免費/贊助者功能整併後的可用功能)。 */
 export function licenseStatus(): LicenseStatus {
+  // 本地修改(非商業自用):一律回報「有效贊助者」,前端 UI(徽章 / 主題 / 功能入口)全開。
   const c = effectiveCache();
-  const lic = { valid: c?.valid ?? false, features: c?.features ?? [] };
-  // 對前端而言「可用的贊助者功能」= 這張碼有解鎖(目錄內功能已無免費期限)。
+  void c;
+  const lic = { valid: true, features: EARLY_ACCESS_FEATURES.map((f) => f.id) };
   const availableEarlyAccess = EARLY_ACCESS_FEATURES.filter((f) => hasFeature(f.id, lic)).map(
     (f) => f.id,
   );
   return {
-    hasKey: readKey() !== null,
-    valid: c?.valid ?? false,
-    tier: c?.tier ?? null,
+    hasKey: true,
+    valid: true,
+    tier: null,
     features: availableEarlyAccess,
-    expiresAt: c?.expiresAt ?? null,
-    reason: c?.reason ?? null,
+    expiresAt: null,
+    reason: null,
     machineId: machineId().slice(0, 8),
     checkedAt: c?.checkedAt ?? null,
   };
